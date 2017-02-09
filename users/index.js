@@ -12,7 +12,7 @@ function hashAndPut(event, done) {
     crypto.pbkdf2(event.password, salt, 1000, 256, 'sha256',
         (err, key) => {
             if (err) done(err, err.stack);
-            put(event, done, key.toString('base64'), salt);
+            else put(event, done, key.toString('base64'), salt);
         }
     );
 }
@@ -76,8 +76,7 @@ function put(event, done, hash, salt) {
 
 exports.handler = (event, context, done) => {
     if (!event.action || !event.email || !event.password) done("Arguments 'action', 'email', and 'password' are required.");
-
-    if (event.action == 'register') register(event, done);
+    else if (event.action == 'register') register(event, done);
     else if (event.action == 'authenticate') authenticate(event, done);
     else done("Unsupported action.");
 };

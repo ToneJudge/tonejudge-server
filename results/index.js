@@ -16,7 +16,7 @@ function top(event, done) {
 
 exports.handler = (event, context, done) => {
     if (!event.action) done("Argument 'action' is required.");
-    if (event.action == "publish") publish(event, done);
-    if (event.action == "top") top(event, done);
+    else if (event.action == "publish") publish(event, done);
+    else if (event.action == "top") top(event, done);
     else done("Unsupported action.");
 };
