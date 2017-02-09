@@ -3,7 +3,7 @@
 const crypto = require('crypto');
 const AWS = require("aws-sdk");
 
-const dynamo = new AWS.DynamoDB({region: 'us-west-2'});
+const db = new AWS.DynamoDB.DocumentClient();
 
 const tablename = 'tonejudge_users';
 
@@ -18,13 +18,11 @@ const hashAndPut = function (event, done) {
 };
 
 const get = function (event, callback) {
-    dynamo.getItem(
+    db.get(
         {
             'TableName' : tablename,
             'Key' : {
-                'email' : {
-                    S : event.email
-                }
+                'email' : event.email
             }
         }, callback);
 };
@@ -50,29 +48,23 @@ const authenticate = function(event, done) {
 };
 
 const verifyHash = function (event, done, item) {
-    crypto.pbkdf2(event.password, item.salt.S, 1000, 256, 'sha256',
+    crypto.pbkdf2(event.password, item.salt, 1000, 256, 'sha256',
         (err, key) => {
             if (err) done(err, err.stack);
-            else if (key.toString('base64') == item.hash.S) done(null, {});
+            else if (key.toString('base64') == item.hash) done(null, {});
             else done('Invalid email or password');
         }
     );
 };
 
 const put = function (event, done, hash, salt) {
-    dynamo.putItem(
+    db.put(
         {
             'TableName' : tablename,
             'Item' : {
-                'email' : {
-                    S : event.email
-                },
-                'hash' : {
-                    S : hash
-                },
-                'salt' : {
-                    S : salt
-                }
+                'email' : event.email,
+                'hash' : hash,
+                'salt' : salt,
             }
         },
         (err, data) => {
