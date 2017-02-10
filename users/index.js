@@ -24,7 +24,8 @@ function get(event, callback) {
             'Key' : {
                 'email' : event.email
             }
-        }, callback);
+        }, callback
+    );
 }
 
 function register(event, done) {

@@ -6,8 +6,41 @@ const db = new AWS.DynamoDB.DocumentClient();
 
 const tablename = 'tonejudge_results';
 
+function get(event, callback) {
+    db.get(
+        {
+            "TableName" : tablename,
+            "text" : event.text
+        }, callback
+    )
+}
+
+function put(event, done) {
+    db.put(
+        {
+            "TableName" : tablename,
+            "Item" : {
+                "text" : event.text,
+                "email" : event.email
+                //
+            }
+        },
+        (err, data) => {
+            if (err) done(err, err.stack);
+            else done(null, {});
+        }
+    )
+}
+
 function publish(event, done) {
     if (!event.email || !event.tones || !event.text) done("Arguments 'email', 'text, and 'tones' are required.");
+    get(event,
+        (err, data) => {
+            if (err) done(err, err.stack);
+            else if (data.Item) done("Text has already been published.");
+            else put(event, done);
+        }
+    );
 }
 
 function top(event, done) {
