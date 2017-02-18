@@ -11,7 +11,7 @@ function hashAndPut(event, done) {
     const salt = crypto.randomBytes(128).toString('base64');
     crypto.pbkdf2(event.password, salt, 1000, 256, 'sha256',
         (err, key) => {
-            if (err) done(err, err.stack);
+            if (err) done(err);
             else put(event, done, key.toString('base64'), salt);
         }
     );
@@ -31,7 +31,7 @@ function get(event, callback) {
 function register(event, done) {
     get(event,
         (err, data) => {
-            if (err) done(err, err.stack);
+            if (err) done(err);
             else if (data.Item) done('There is already a user registered with that email.');
             else hashAndPut(event, done);
         }
@@ -41,7 +41,7 @@ function register(event, done) {
 function authenticate(event, done) {
     get(event,
         (err, data) => {
-            if (err) done(err, err.stack);
+            if (err) done(err);
             else if (!data.Item) done('Invalid email or password.');
             else verifyHash(event, done, data.Item);
         }
@@ -51,7 +51,7 @@ function authenticate(event, done) {
 function verifyHash(event, done, item) {
     crypto.pbkdf2(event.password, item.salt, 1000, 256, 'sha256',
         (err, key) => {
-            if (err) done(err, err.stack);
+            if (err) done(err);
             else if (key.toString('base64') == item.hash) done(null, {});
             else done('Invalid email or password');
         }
@@ -69,7 +69,7 @@ function put(event, done, hash, salt) {
             }
         },
         (err, data) => {
-            if (err) done(err, err.stack);
+            if (err) done(err);
             else done(null, {});
         }
     );
