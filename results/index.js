@@ -6,6 +6,8 @@ let connection;
 
 const TABLE_NAME = 'results';
 
+const DEFAULT_PAGE_SIZE = 25;
+
 const TONES = {
     "anger" : 0.0,
     "disgust" : 0.0,
@@ -28,24 +30,33 @@ COLUMNS.text = null;
 
 function publish(event, done) {
     if (!event.email || !event.text) done("Arguments 'email' and 'text' are required.");
-    const row = Object.assign({}, COLUMNS, event);
-    for (const k of Object.keys(row)) {
-        if (!(k in COLUMNS)) {
-            delete row[k];
+    else {
+        const row = Object.assign({}, COLUMNS, event);
+        for (const k of Object.keys(row)) {
+            if (!(k in COLUMNS)) {
+                delete row[k];
+            }
         }
+        connection.query('INSERT INTO ?? SET ?', [TABLE_NAME, row],
+            (err, results, fields) => {
+                if (err) done(err);
+                else done(null, {});
+            }
+        );
     }
-    connection.query('INSERT INTO ?? SET ?', [TABLE_NAME, row],
-        (err, results, fields) => {
-            if (err) done(err);
-            else done(null, {});
-        }
-    );
 }
 
 function top(event, done) {
+    if (!event.page) event.page = 0;
+    if (!event.pageSize) event.pageSize = DEFAULT_PAGE_SIZE;
+
     if (!event.tone) done("Argument 'tone' is required.");
-    if (!(event.tone in TONES)) done("Invalid argument 'tone'. Must be one of: " + Object.keys(TONES));
-    connection.query("SELECT * FROM ??", TABLE_NAME,
+    else if (!(event.tone in TONES)) done("Invalid argument 'tone'. Must be one of: " + Object.keys(TONES));
+    else if (!Number.isInteger(event.page) || !Number.isInteger(event.pageSize)) done("Arguments 'page' and 'pageSize' must be integers.");
+    else if (event.page < 0 || event.pageSize < 0) done("Arguments 'page' and 'pageSize' must be >= zero.");
+    else if (event.pageSize > 100) done("Argument 'pageSize' must be <= 100.");
+    else connection.query("SELECT * FROM ?? ORDER BY ?? DESC LIMIT ?, ?",
+        [TABLE_NAME, event.tone, event.page * event.pageSize, event.pageSize],
         (err, results, fields) => {
             if (err) done(err);
             else done(null, results);

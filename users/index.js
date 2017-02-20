@@ -48,8 +48,7 @@ function put(event, done, hash, salt) {
             if (err) {
                 if(err.code === "ER_DUP_ENTRY") done ('There is already a user registered with that email.');
                 else done(err);
-            }
-            else done(null, {});
+            } else done(null, {});
         }
     );
 }
