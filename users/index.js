@@ -1,13 +1,13 @@
 'use strict';
 
 const crypto = require('crypto');
-const AWS = require("aws-sdk");
+const mysql = require('mysql');
 
-const db = new AWS.DynamoDB.DocumentClient();
+let connection;
 
-const tablename = 'tonejudge_users';
+const TABLE_NAME = 'users';
 
-function hashAndPut(event, done) {
+function register(event, done) {
     const salt = crypto.randomBytes(128).toString('base64');
     crypto.pbkdf2(event.password, salt, 1000, 256, 'sha256',
         (err, key) => {
@@ -17,33 +17,12 @@ function hashAndPut(event, done) {
     );
 }
 
-function get(event, callback) {
-    db.get(
-        {
-            'TableName' : tablename,
-            'Key' : {
-                'email' : event.email
-            }
-        }, callback
-    );
-}
-
-function register(event, done) {
-    get(event,
-        (err, data) => {
-            if (err) done(err);
-            else if (data.Item) done('There is already a user registered with that email.');
-            else hashAndPut(event, done);
-        }
-    );
-}
-
 function authenticate(event, done) {
-    get(event,
-        (err, data) => {
+    connection.query('SELECT * FROM ?? WHERE `email` = ?', [TABLE_NAME, event.email],
+        (err, results, fields) => {
             if (err) done(err);
-            else if (!data.Item) done('Invalid email or password.');
-            else verifyHash(event, done, data.Item);
+            else if (results.length === 0) done('Invalid email or password.');
+            else verifyHash(event, done, results[0]);
         }
     );
 }
@@ -59,25 +38,36 @@ function verifyHash(event, done, item) {
 }
 
 function put(event, done, hash, salt) {
-    db.put(
-        {
-            'TableName' : tablename,
-            'Item' : {
-                'email' : event.email,
-                'hash' : hash,
-                'salt' : salt,
+    connection.query("INSERT INTO ?? SET ?", [TABLE_NAME,
+            {
+                "email" : event.email,
+                "hash" : hash,
+                "salt" : salt
+            }],
+        (err, results, fields) => {
+            if (err) {
+                if(err.code === "ER_DUP_ENTRY") done ('There is already a user registered with that email.');
+                else done(err);
             }
-        },
-        (err, data) => {
-            if (err) done(err);
             else done(null, {});
         }
     );
 }
 
-exports.handler = (event, context, done) => {
+exports.handler = (event, context, end) => {
+    connection = mysql.createConnection({
+        host: process.env.MYSQL_HOST,
+        user: process.env.MYSQL_USER,
+        password: process.env.MYSQL_PASSWORD,
+        database: process.env.MYSQL_DATABASE
+    });
+    const done = (err, msg) => {
+        connection.end();
+        end(err, msg);
+    };
     if (!event.action || !event.email || !event.password) done("Arguments 'action', 'email', and 'password' are required.");
     else if (event.action == 'register') register(event, done);
     else if (event.action == 'authenticate') authenticate(event, done);
     else done("Unsupported action.");
 };
+
