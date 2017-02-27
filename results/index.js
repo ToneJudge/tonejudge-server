@@ -59,7 +59,7 @@ function top(event, done) {
         [TABLE_NAME, event.tone, event.page * event.pageSize, event.pageSize],
         (err, results, fields) => {
             if (err) done(err);
-            else done(null, results);
+            else done(null, {"results" : results});
         }
     );
 }
